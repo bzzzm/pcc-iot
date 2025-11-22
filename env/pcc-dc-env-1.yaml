@@ -1,0 +1,180 @@
+
+# Board generic settings
+esphome:
+  name: pcc-dc-env-1
+  friendly_name: PCC DC Environment Sensor 1
+
+  # Startup sequence, make the onboard_led blue until the first sensor reading
+  on_boot:
+  - light.turn_on:
+      id: onboard_led
+      brightness: 100%
+      red: 0%
+      green: 0%
+      blue: 100%
+
+# Board variant and chipset
+esp32:
+  variant: esp32s2
+  board: featheresp32-s2
+
+# Wifi configuration
+#
+# On startup the board tries to connect to the last known wifi network.
+# If the known network is not available, it will start an access point with the SSID and Password that will act as a
+# captive portal where you can select the network you want it to connect to.
+wifi:
+  ap:
+    ssid: "pcc-dc-env-1"
+    password: !secret  captire_wifi_pass
+
+# Captive portal to configure Wifi
+captive_portal:
+
+# Enable API
+api:
+  password: !secret web_password
+
+# Enable Prometheus
+prometheus:
+
+# Enable Over-the-Air updates
+ota:
+  platform: esphome
+
+# Enable logger
+logger:
+
+# Enable webserver on port 80
+web_server:
+  version: 3
+  port: 80
+  local: true
+  auth:
+    username: !secret web_username
+    password: !secret web_password
+  sorting_groups:
+    - id: sorting_group_temperature
+      name: "Temperature"
+      sorting_weight: 0
+    - id: sorting_group_pressure
+      name: "Pressure"
+      sorting_weight: 1
+    - id: sorting_group_system
+      name: "System"
+      sorting_weight: 2
+
+# I2C is required to communicate with the BMP280
+i2c:
+    sda: GPIO8
+    scl: GPIO9
+    scan: True
+
+# Sensors
+sensor:
+
+  # Environment sensor
+  - platform: bmp280_i2c
+
+    # Temperature sensor: update the onboard led state on each poll
+    temperature:
+      name: Temperature
+      id: temperature
+      oversampling: 16x
+      web_server:
+        sorting_group_id: sorting_group_temperature
+      on_value:
+        then:
+          - lambda: |
+              if (x > id(temperature_threshold).state) {
+                id(onboard_led).turn_on().set_rgb(1.0, 0, 0).set_brightness(1.0).perform();
+              } else {
+                id(onboard_led).turn_on().set_rgb(0, 1.0, 0).set_brightness(1.0).perform();
+              }
+
+    # Pressure sensor
+    pressure:
+      name: Pressure
+      id: pressure
+      web_server:
+        sorting_group_id: sorting_group_pressure
+    address: 0x77
+    update_interval: 10s # update every 10 seconds
+
+  # Wifi Signal
+  - platform: wifi_signal
+    name: Wifi Signal
+    update_interval: 60s
+    web_server:
+      sorting_group_id: sorting_group_system
+
+# Onboard LED
+light:
+  - platform: neopixelbus
+    type: GRB
+    variant: WS2811
+    pin: GPIO1
+    num_leds: 1
+    name: Onboard LED
+    id: onboard_led
+    web_server:
+      sorting_group_id: sorting_group_system
+
+# Basic GPIO control
+output:
+  - platform: gpio
+    pin: GPIO2
+    id: led_power
+
+# Custom sensor to change the temperature threshold
+number:
+  - platform: template
+    name: Temperature Threshold
+    id: temperature_threshold
+    optimistic: true
+    min_value: 0
+    max_value: 100
+    step: 0.5
+    initial_value: 28.0
+    restore_value: true
+    web_server:
+      sorting_group_id: sorting_group_temperature
+
+  - platform: template
+    name: Pressure Threshold
+    id: pressure_threshold
+    optimistic: true
+    min_value: 500
+    max_value: 2000
+    step: 10
+    initial_value: 1200
+    restore_value: true
+    web_server:
+      sorting_group_id: sorting_group_pressure
+
+# Binary sensors used as alarms
+binary_sensor:
+  - platform: template
+    name: Temperature Alarm
+    id: temperature_alarm
+    web_server:
+      sorting_group_id: sorting_group_temperature
+    lambda: |-
+      return (id(temperature_threshold).state < id(temperature).state);
+  - platform: template
+    name: Pressure Alarm
+    id: pressure_alarm
+    web_server:
+      sorting_group_id: sorting_group_pressure
+    lambda: |-
+      return (id(pressure_threshold).state < id(pressure).state);
+
+# NTP
+time:
+  - platform: sntp
+    id: sntp_time
+    timezone: Europe/Bucharest
+    servers:
+     - 0.pool.ntp.org
+     - 1.pool.ntp.org
+     - 2.pool.ntp.org
