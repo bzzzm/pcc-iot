@@ -173,7 +173,7 @@ binary_sensor:
 time:
   - platform: sntp
     id: sntp_time
-    timezone: Europe/Bucharest
+    timezone: !secret timezone
     servers:
      - 0.pool.ntp.org
      - 1.pool.ntp.org

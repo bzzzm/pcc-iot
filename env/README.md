@@ -7,7 +7,7 @@ Environment sensor using ESP32 and ESPHome. It exposes the readings from a BMP28
     - Raw values on `/sensor/temperature` or `/sensor/pressure`
     - Alerts based on threshold that you can configure in the Web dashboard on `/binary_sensor/temperature_alarm` and `/binary_sensor/pressure_alarm`
 - Prometheus `/metrics` HTTP endpoint
-- Onboard RGB LED (green when temperature is below threshold, red when above)
+- Onboard RGB LED (green when temperature is below threshold, red when above).
 
 ## Hardware
 
@@ -26,6 +26,9 @@ Here is a list of hardware components required for this device:
 4. Put your device in `BOOT` mode. If you are using the same device as me, you need the following: while holding down the `BOOT` button, push the `R` button and _only_ after that release the `BOOT` button.
 5. From the root of the repo run `esphome run env/pcc-dc-env-1.yaml --upload_speed 921600`. Use the file corresponding to the device you want to flash. The `--upload_speed` argument is not mandatory.
 6. If you don't get any errors, your devices should be flashed and you can continue with [Initial confguration](#initial-configuration).
+
+
+These steps need to be executed just once, when you initialize your device. If you want to push config changes after the device is already flashed, just run `esphome run env/pcc-dc-env-1.yaml --device DEVICE_IP` (replace `DEVICE_IP` with the actual IP or mDNS of the device) to re-flash over the air.
 
 ## Initial configuration
 
@@ -47,3 +50,7 @@ To monitor your device with [Uptime Kuma](https://uptimekuma.org/), take inspira
 ### Prometheus
 
 Scrape the `/metrics` endpoint. Create a grafana dashboard to see the historical data. Use AlertManager to get notifications.
+
+### Onboard LED
+
+The onboard LED will turn green if the temperature is below the threshold you configured in the dashboard, or red if the value is above that. This might be helpful to get the temperature just by looking at the device, instead of having to browse an online tool (like Uptime Kuma or Grafana).
